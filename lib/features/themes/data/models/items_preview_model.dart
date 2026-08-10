@@ -10,13 +10,16 @@ class ItemsPreviewModel extends ItemsPreview {
     required super.tags,
   });
 
-  factory ItemsPreviewModel.fromFullJson(Map<String, dynamic> json) {
+  factory ItemsPreviewModel.fromIndexJson(Map<String, dynamic> json) {
     return ItemsPreviewModel(
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String? ?? '',
-      theoryCount: (json['theory'] as List?)?.length ?? 0,
-      practiceCount: (json['practice'] as List?)?.length ?? 0,
+
+      // просто смотрим число, а не обрабатываем целый список
+      theoryCount: json['theoryCount'] as int? ?? 0,
+      practiceCount: json['practiceCount'] as int? ?? 0,
+      
       tags: (json['tags'] as List?)?.map((e) => e as String).toList() ?? [],
     );
   }
