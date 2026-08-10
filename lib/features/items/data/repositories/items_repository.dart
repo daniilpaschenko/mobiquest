@@ -60,20 +60,11 @@ class ItemsRepository implements IItemsRepository {
       final index = await _content.getIndex();
       final items = index['items'] as List;
 
-      final previews = <ItemsPreviewModel>[];
-      for (final item in items) {
-        final map = item as Map<String, dynamic>;
-        final id = map['id'] as String;
-        final version = map['version'] as int? ?? 1;
-        final fullData = await _content.getItem(id, remoteVersion: version);
-
-        previews.add(ItemsPreviewModel.fromFullJson({
-          ...map,
-          'theory': fullData['theory'],
-          'practice': fullData['practice'],
-        }));
-      }
-      return previews;
+      return items
+          .map((item) => ItemsPreviewModel.fromIndexJson(
+                item as Map<String, dynamic>,
+              ))
+          .toList();
     } catch (e) {
       throw ContentUnavailableException(
         'Не удалось загрузить список тем: $e',
