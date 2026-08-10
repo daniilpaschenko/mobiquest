@@ -122,7 +122,7 @@ class ResultView extends StatelessWidget {
                 ],
               ),
             ),
-          ] else ...[
+          ] else if (score == total) ...[
             SizedBox(height: screenW * 0.04),
             Container(
               padding: EdgeInsets.symmetric(
