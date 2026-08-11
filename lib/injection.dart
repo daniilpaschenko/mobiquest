@@ -5,6 +5,8 @@ import 'package:get_it/get_it.dart';
 import 'core/datasources/items_remote_datasource.dart';
 import 'core/datasources/items_cache_datasource.dart';
 import 'core/datasources/items_content_source.dart';
+import 'core/services/sound/sound_interface.dart';
+import 'core/services/sound/sound_repository.dart';
 
 // themes
 import 'features/themes/data/repositories/themes_repository.dart';
@@ -36,6 +38,8 @@ void setupDependencies() {
   final contentSource = ItemsContentSource(remoteDatasource, cacheDatasource);
 
   sl.registerLazySingleton<ItemsContentSource>(() => contentSource);
+
+  sl.registerLazySingleton<SoundInterface>(() => SoundRepository());
 
   // themes
   final themesRepo = ThemesRepository(sl<ItemsContentSource>());
