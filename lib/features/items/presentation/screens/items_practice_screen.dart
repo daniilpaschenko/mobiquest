@@ -12,6 +12,10 @@ import '../../../profile/presentation/blocs/profile_bloc.dart';
 import '../../../profile/presentation/blocs/profile_event.dart';
 import '../../../profile/presentation/blocs/profile_state.dart';
 
+import '../../../../injection.dart';
+import '../../../../core/services/sound/app_sounds.dart';
+import '../../../../core/services/sound/sound_interface.dart';
+
 class ItemsPracticeScreen extends StatefulWidget {
   final String itemsId;
   final String itemsTitle;
@@ -65,6 +69,13 @@ class _ItemsPracticeScreenState extends State<ItemsPracticeScreen> {
         _answered = false;
       });
     } else {
+
+      if (_score != _questions.length) {
+        sl<SoundInterface>().play(AppSounds.fail);
+      } else {
+        sl<SoundInterface>().play(AppSounds.success);
+      }
+
       // тема пройдена — ProfileBloc сам решит, начислять ли опыт
       // (100% правильных + опыт по этой теме сегодня ещё не давали)
       context.read<ProfileBloc>().add(
