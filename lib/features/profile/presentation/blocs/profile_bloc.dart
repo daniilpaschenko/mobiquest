@@ -44,7 +44,12 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final trimmed = event.name.trim();
     if (trimmed.isEmpty) return;
 
-    await _setProfileName(trimmed);
+    try {
+      await _setProfileName(trimmed);
+    } catch (e) {
+      emit(ProfileError(e.toString()));
+      return;
+    }
 
     final current = state;
     if (current is ProfileLoaded) {
@@ -58,15 +63,19 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     SubmitPracticeResult event,
     Emitter<ProfileState> emit,
   ) async {
-    final result = await _registerPracticeResult(
-      itemsId: event.itemsId,
-      score: event.score,
-      total: event.total,
-    );
+    try {
+      final result = await _registerPracticeResult(
+        itemsId: event.itemsId,
+        score: event.score,
+        total: event.total,
+      );
 
-    emit(ProfileLoaded(
-      result.profile,
-      awardedPoints: result.awarded ? result.pointsAwarded : null,
-    ));
+      emit(ProfileLoaded(
+        result.profile,
+        awardedPoints: result.awarded ? result.pointsAwarded : null,
+      ));
+    } catch (e) {
+      emit(ProfileError(e.toString()));
+    }
   }
 }
