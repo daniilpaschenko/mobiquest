@@ -11,6 +11,7 @@ class FakeProfileLocalDatasource implements ProfileLocalDatasource {
   UserProfile user;
   String? lastChangedName;
   Object? error;
+  Object? errorOnSetExpDate;
   final Map<String, String> _expDates = {};
 
   @override
@@ -47,6 +48,7 @@ class FakeProfileLocalDatasource implements ProfileLocalDatasource {
   @override
   Future<void> setExpDateForItem(String itemsId, String isoDate) async {
     if (error != null) throw error!;
+    if (errorOnSetExpDate != null) throw errorOnSetExpDate!;
     _expDates[itemsId] = isoDate;
   }
 }
@@ -136,6 +138,34 @@ void main() {
       expect(result.awarded, true);
       expect(result.pointsAwarded, 5);
       expect(result.profile.experience, 10);
+    });
+
+    test('does not award twice when saving exp date fails', () async {
+      // имитация ошибки, что hive не смог сохранить запись даты
+      dataSource.errorOnSetExpDate = Exception('hive is down');
+
+      await expectLater(
+        repository.registerPracticeResult(itemsId: 'x', score: 7, total: 7),
+        throwsA(isA<Exception>()),
+      );
+
+      // ошибка ушла наружу, а не превратилась в молчаливый awarded: false,
+      // и ничего не записалось: опыт не начислен, дата не сохранена
+      expect(dataSource.user.experience, 0);
+      expect(dataSource.getExpDates(), isEmpty);
+
+      dataSource.errorOnSetExpDate = null; // снимаем поломку
+
+      final retry = await repository.registerPracticeResult(
+        itemsId: 'x',
+        score: 7,
+        total: 7,
+      );
+
+      // повтор начисляет опыт ровно один раз, а не удваивает
+      expect(retry.awarded, true);
+      expect(retry.pointsAwarded, 5);
+      expect(retry.profile.experience, 5);
     });
   });
 }
