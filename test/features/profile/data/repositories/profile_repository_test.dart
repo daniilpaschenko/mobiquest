@@ -1,59 +1,9 @@
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobiquest/features/profile/data/datasources/profile_local_datasource.dart';
 import 'package:mobiquest/features/profile/data/repositories/profile_repository.dart';
 import 'package:mobiquest/features/profile/domain/entities/practice_reward_result.dart';
-import 'package:mobiquest/features/profile/domain/entities/user_profile.dart';
 
-class FakeProfileLocalDatasource implements ProfileLocalDatasource {
-  FakeProfileLocalDatasource({
-    this.user = const UserProfile(name: 'Гость', experience: 0),
-  });
-
-  UserProfile user;
-  String? lastChangedName;
-  Object? error;
-  Object? errorOnSetExpDate;
-  final Map<String, String> _expDates = {};
-
-  @override
-  String getName() {
-    if (error != null) throw error!;
-    return user.name;
-  }
-
-  @override
-  Future<void> setName(String name) async {
-    if (error != null) throw error!;
-    lastChangedName = name;
-    user = user.copyWith(name: name);
-  }
-
-  @override
-  int getExperience() {
-    if (error != null) throw error!;
-    return user.experience;
-  }
-
-  @override
-  Future<void> addExperience(int amount) async {
-    if (error != null) throw error!;
-    user = user.copyWith(experience: user.experience + amount);
-  }
-
-  @override
-  Map<String, String> getExpDates() {
-    if (error != null) throw error!;
-    return Map<String, String>.from(_expDates);
-  }
-
-  @override
-  Future<void> setExpDateForItem(String itemsId, String isoDate) async {
-    if (error != null) throw error!;
-    if (errorOnSetExpDate != null) throw errorOnSetExpDate!;
-    _expDates[itemsId] = isoDate;
-  }
-}
+import '../../../../helpers/fake_profile_local_datasource.dart';
 
 void main() {
   late FakeProfileLocalDatasource dataSource;
@@ -171,6 +121,12 @@ void main() {
       // fixed "current time": March 10, 2026, 09:30
       now = DateTime(2026, 3, 10, 9, 30);
       clock = Clock(() => now);
+      repository = ProfileRepository(dataSource, clock);
+    });
+
+    tearDown(() {
+      // restore the repository that reads the real system clock
+      repository = ProfileRepository(dataSource);
     });
 
     Future<PracticeRewardResult> practiceAt(
@@ -178,13 +134,10 @@ void main() {
       String itemsId = 'x',
     }) {
       now = moment;
-      return withClock(
-        clock,
-        () => repository.registerPracticeResult(
-          itemsId: itemsId,
-          score: 7,
-          total: 7,
-        ),
+      return repository.registerPracticeResult(
+        itemsId: itemsId,
+        score: 7,
+        total: 7,
       );
     }
 
@@ -290,13 +243,10 @@ void main() {
         await practiceAt(DateTime(2026, 3, 10, 9, 30));
 
         now = DateTime(2026, 3, 11, 9, 30);
-        final partial = await withClock(
-          clock,
-          () => repository.registerPracticeResult(
-            itemsId: 'x',
-            score: 6,
-            total: 7,
-          ),
+        final partial = await repository.registerPracticeResult(
+          itemsId: 'x',
+          score: 6,
+          total: 7,
         );
         expect(partial.awarded, false);
 
