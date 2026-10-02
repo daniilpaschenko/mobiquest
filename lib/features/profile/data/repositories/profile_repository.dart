@@ -44,8 +44,10 @@ class ProfileRepository implements IProfileRepository {
       return PracticeRewardResult(profile: await getProfile(), awarded: false);
     }
 
-    await _local.addExperience(rewardPoints);
+    // дата пишется до начисления опыта: если начисление упадёт, повторное
+    // прохождение в тот же день уже не начислит опыт второй раз
     await _local.setExpDateForItem(itemsId, today);
+    await _local.addExperience(rewardPoints);
 
     return PracticeRewardResult(
       profile: await getProfile(),
