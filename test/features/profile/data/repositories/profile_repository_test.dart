@@ -44,6 +44,19 @@ void main() {
       expect(result.profile.experience, 0);
     });
 
+    test('does not award when there are no questions', () async {
+      // an empty practice passes score == total (0 == 0), so the total > 0
+      // guard is the only thing that keeps it from being a perfect run
+      final result = await repository.registerPracticeResult(
+        itemsId: 'x',
+        score: 0,
+        total: 0,
+      );
+
+      expect(result.awarded, false);
+      expect(result.profile.experience, 0);
+    });
+
     test('awards 5 exp on perfect score', () async {
       final result = await repository.registerPracticeResult(
         itemsId: 'x',
