@@ -1,3 +1,5 @@
+import 'package:clock/clock.dart';
+
 import '../../domain/entities/user_profile.dart';
 import '../../domain/entities/practice_reward_result.dart';
 import '../../domain/interfaces/i_profile_repository.dart';
@@ -57,7 +59,7 @@ class ProfileRepository implements IProfileRepository {
   }
 
   String _todayString() {
-    final now = DateTime.now();
+    final now = clock.now();
     final y = now.year.toString().padLeft(4, '0');
     final m = now.month.toString().padLeft(2, '0');
     final d = now.day.toString().padLeft(2, '0');
