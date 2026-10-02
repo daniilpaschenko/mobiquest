@@ -7,8 +7,9 @@ import '../datasources/profile_local_datasource.dart';
 
 class ProfileRepository implements IProfileRepository {
   final ProfileLocalDatasource _local;
+  final Clock _clock;
 
-  const ProfileRepository(this._local);
+  const ProfileRepository(this._local, [this._clock = const Clock()]);
 
   // сколько очков опыта даётся за 100% прохождение темы
   static const int rewardPoints = 5;
@@ -59,7 +60,7 @@ class ProfileRepository implements IProfileRepository {
   }
 
   String _todayString() {
-    final now = clock.now();
+    final now = _clock.now();
     final y = now.year.toString().padLeft(4, '0');
     final m = now.month.toString().padLeft(2, '0');
     final d = now.day.toString().padLeft(2, '0');
