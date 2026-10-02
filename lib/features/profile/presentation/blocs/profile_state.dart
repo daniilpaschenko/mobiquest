@@ -19,8 +19,11 @@ final class ProfileLoaded extends ProfileState {
 
   const ProfileLoaded(this.profile, {this.awardedPoints});
 
-  ProfileLoaded copyWith({UserProfile? profile}) {
-    return ProfileLoaded(profile ?? this.profile);
+  ProfileLoaded copyWith({UserProfile? profile, int? awardedPoints}) {
+    return ProfileLoaded(
+      profile ?? this.profile,
+      awardedPoints: awardedPoints ?? this.awardedPoints,
+    );
   }
 }
 
