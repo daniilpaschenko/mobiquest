@@ -14,11 +14,16 @@ class FakeProfileLocalDatasource implements ProfileLocalDatasource {
   /// thrown from [setExpDateForItem] only
   Object? errorOnSetExpDate;
 
+  /// thrown from the read methods only ([getName], [getExperience]), so a write
+  /// can succeed while a later reload fails
+  Object? errorOnRead;
+
   final Map<String, String> _expDates = {};
 
   @override
   String getName() {
     if (error != null) throw error!;
+    if (errorOnRead != null) throw errorOnRead!;
     return user.name;
   }
 
@@ -32,12 +37,14 @@ class FakeProfileLocalDatasource implements ProfileLocalDatasource {
   @override
   int getExperience() {
     if (error != null) throw error!;
+    if (errorOnRead != null) throw errorOnRead!;
     return user.experience;
   }
 
   @override
   Future<void> addExperience(int amount) async {
     if (error != null) throw error!;
+    if (amount <= 0) return;
     user = user.copyWith(experience: user.experience + amount);
   }
 

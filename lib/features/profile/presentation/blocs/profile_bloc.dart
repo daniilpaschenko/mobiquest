@@ -54,8 +54,16 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final current = state;
     if (current is ProfileLoaded) {
       emit(current.copyWith(profile: current.profile.copyWith(name: trimmed)));
-    } else {
+      return;
+    }
+
+    // состояние ещё не загружено, поэтому профиль приходится перечитывать.
+    // без try/catch ошибка чтения ушла бы в addError без эмита, и bloc остался
+    // бы в предыдущем состоянии: экран показал бы старое имя
+    try {
       emit(ProfileLoaded(await _getProfile()));
+    } catch (e) {
+      emit(ProfileError(e.toString()));
     }
   }
 

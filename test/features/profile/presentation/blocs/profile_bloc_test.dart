@@ -142,6 +142,45 @@ void main() {
       expect(dataSource.lastChangedName, isNull);
       expect(bloc.state, isA<ProfileError>());
     });
+
+    test('reloads the profile when the state is not loaded yet', () async {
+      // состояние ещё ProfileInitial, поэтому опереться не на что и профиль
+      // приходится перечитывать из репозитория
+      expect(bloc.state, isA<ProfileInitial>());
+
+      bloc.add(const ChangeProfileName('Вася'));
+      final state = await nextLoaded();
+
+      expect(state.profile.name, 'Вася');
+      expect(state.awardedPoints, isNull);
+    });
+
+    test('reloads the profile after an error', () async {
+      dataSource.error = Exception('hive is down');
+
+      bloc.add(const LoadProfile());
+      await nextError();
+
+      dataSource.error = null;
+
+      bloc.add(const ChangeProfileName('Вася'));
+      final state = await nextLoaded();
+
+      expect(bloc.state, isA<ProfileLoaded>());
+      expect(state.profile.name, 'Вася');
+    });
+
+    test('emits ProfileError when reloading the profile fails', () async {
+      // the name is written first and succeeds, the reload after it fails
+      dataSource.errorOnRead = Exception('hive read is down');
+
+      bloc.add(const ChangeProfileName('Вася'));
+      final error = await nextError();
+
+      expect(error.message, contains('hive read is down'));
+      expect(dataSource.lastChangedName, 'Вася');
+      expect(bloc.state, isA<ProfileError>());
+    });
   });
 
   group('submitPracticeResult', () {
