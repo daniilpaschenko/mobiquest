@@ -22,6 +22,19 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, state) {
+            if (state is ProfileError) {
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.all(hPad),
+                  child: Text(
+                    'Не удалось загрузить профиль',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _rose, fontSize: screenW * 0.04),
+                  ),
+                ),
+              );
+            }
+
             if (state is! ProfileLoaded) {
               return const Center(
                 child: CircularProgressIndicator(color: _rose),
