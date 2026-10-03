@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobiquest/features/profile/data/repositories/profile_repository.dart';
@@ -9,6 +11,22 @@ import 'package:mobiquest/features/profile/presentation/blocs/profile_event.dart
 import 'package:mobiquest/features/profile/presentation/blocs/profile_state.dart';
 
 import '../../../../helpers/fake_profile_local_datasource.dart';
+
+/// Holds every [setExpDateForItem] call on [gate] until the test releases it,
+/// which is the only way to force two concurrent submissions to interleave
+class GatedProfileLocalDatasource extends FakeProfileLocalDatasource {
+  final Completer<void> gate = Completer<void>();
+
+  /// How many writes are currently waiting on [gate].
+  int blocked = 0;
+
+  @override
+  Future<void> setExpDateForItem(String itemsId, String isoDate) async {
+    blocked++;
+    await gate.future;
+    await super.setExpDateForItem(itemsId, isoDate);
+  }
+}
 
 void main() {
   late FakeProfileLocalDatasource dataSource;
@@ -52,6 +70,17 @@ void main() {
     now = moment;
     bloc.add(SubmitPracticeResult(itemsId: itemsId, score: 7, total: 7));
     return nextLoaded();
+  }
+
+  // ждём, пока [dataSource] доведёт [count] записей до гейта
+  Future<void> waitForBlockedWrites(
+    GatedProfileLocalDatasource dataSource,
+    int count,
+  ) async {
+    for (var i = 0; i < 1000 && dataSource.blocked < count; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(dataSource.blocked, count, reason: 'writes never reached the gate');
   }
 
   group('loadProfile', () {
@@ -225,6 +254,49 @@ void main() {
 
       expect(state.profile.experience, 10);
       expect(state.awardedPoints, 5);
+    });
+
+    test('awards once when two results are submitted at once', () async {
+      // the daily limit is read and written in two separate steps, so a second
+      // submission arriving in between can slip past the check
+      final gatedSource = GatedProfileLocalDatasource();
+      final repository = ProfileRepository(gatedSource, Clock(() => now));
+      final concurrentBloc = ProfileBloc(
+        getProfile: GetProfile(repository),
+        setProfileName: SetProfileName(repository),
+        registerPracticeResult: RegisterPracticeResult(repository),
+      );
+      addTearDown(concurrentBloc.close);
+
+      final awarded = <int?>[];
+      final sub = concurrentBloc.stream.listen((state) {
+        if (state is ProfileLoaded) awarded.add(state.awardedPoints);
+      });
+
+      concurrentBloc.add(
+        const SubmitPracticeResult(itemsId: 'x', score: 7, total: 7),
+      );
+      await waitForBlockedWrites(gatedSource, 1);
+
+      // the first run is still parked mid-write, so the date is not stored yet
+      concurrentBloc.add(
+        const SubmitPracticeResult(itemsId: 'x', score: 7, total: 7),
+      );
+      await pumpEventQueue(times: 100);
+
+      // the second submission is queued behind the first one and has not
+      // reached the write: it would have slipped past the daily limit
+      expect(gatedSource.blocked, 1);
+      expect(awarded, isEmpty);
+
+      gatedSource.gate.complete();
+      await pumpEventQueue();
+
+      // only the first submission is rewarded, the second one sees the date
+      expect(awarded, [5, null]);
+      expect(gatedSource.user.experience, 5);
+
+      await sub.cancel();
     });
   });
 }
