@@ -5,6 +5,12 @@ import '../../domain/usecases/register_practice_result.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
 
+// обрабатывает события по одному вместо конкурентной обработки по умолчанию
+// иначе два сабмита подряд успевают оба пройти проверку дневного лимита
+EventTransformer<E> _sequential<E>() {
+  return (events, mapper) => events.asyncExpand(mapper);
+}
+
 // Singleton-bloc: живёт на уровне всего приложения (регистрируется как
 // registerLazySingleton в injection.dart и предоставляется один раз в
 // main.dart), т.к. и экран практики, и экран профиля должны видеть
@@ -21,7 +27,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   }) : super(const ProfileInitial()) {
     on<LoadProfile>(_onLoadProfile);
     on<ChangeProfileName>(_onChangeProfileName);
-    on<SubmitPracticeResult>(_onSubmitPracticeResult);
+    on<SubmitPracticeResult>(
+      _onSubmitPracticeResult,
+      transformer: _sequential(),
+    );
   }
 
   Future<void> _onLoadProfile(
