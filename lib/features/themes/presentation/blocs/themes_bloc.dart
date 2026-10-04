@@ -15,6 +15,9 @@ class ThemesBloc extends Bloc<ThemesEvent, ThemesState> {
     LoadItems event,
     Emitter<ThemesState> emit,
   ) async {
+    // пока грузим, повторный LoadItems игнорируем
+    if (state is ThemesLoading) return;
+
     emit(const ThemesLoading());
     try {
       final items = await _getItems();
