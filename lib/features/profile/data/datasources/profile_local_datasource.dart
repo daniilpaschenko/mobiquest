@@ -13,13 +13,17 @@ class ProfileLocalDatasource {
 
   Box get _box => Hive.box(boxName);
 
-  String getName() => (_box.get(_keyName) as String?) ?? defaultName;
+  String getName() {
+    final name = _box.get(_keyName) as String?;
+    return (name == null || name.isEmpty) ? defaultName : name;
+  }
 
   Future<void> setName(String name) => _box.put(_keyName, name);
 
   int getExperience() => (_box.get(_keyExperience) as int?) ?? 0;
 
   Future<void> addExperience(int amount) async {
+    if (amount <= 0) return;
     final current = getExperience();
     await _box.put(_keyExperience, current + amount);
   }

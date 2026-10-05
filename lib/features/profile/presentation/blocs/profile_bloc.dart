@@ -5,6 +5,12 @@ import '../../domain/usecases/register_practice_result.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
 
+// обрабатывает события по одному вместо конкурентной обработки по умолчанию
+// иначе два сабмита подряд успевают оба пройти проверку дневного лимита
+EventTransformer<E> _sequential<E>() {
+  return (events, mapper) => events.asyncExpand(mapper);
+}
+
 // Singleton-bloc: живёт на уровне всего приложения (регистрируется как
 // registerLazySingleton в injection.dart и предоставляется один раз в
 // main.dart), т.к. и экран практики, и экран профиля должны видеть
@@ -21,7 +27,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   }) : super(const ProfileInitial()) {
     on<LoadProfile>(_onLoadProfile);
     on<ChangeProfileName>(_onChangeProfileName);
-    on<SubmitPracticeResult>(_onSubmitPracticeResult);
+    on<SubmitPracticeResult>(
+      _onSubmitPracticeResult,
+      transformer: _sequential(),
+    );
   }
 
   Future<void> _onLoadProfile(
@@ -44,13 +53,26 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final trimmed = event.name.trim();
     if (trimmed.isEmpty) return;
 
-    await _setProfileName(trimmed);
+    try {
+      await _setProfileName(trimmed);
+    } catch (e) {
+      emit(ProfileError(e.toString()));
+      return;
+    }
 
     final current = state;
     if (current is ProfileLoaded) {
       emit(current.copyWith(profile: current.profile.copyWith(name: trimmed)));
-    } else {
+      return;
+    }
+
+    // состояние ещё не загружено, поэтому профиль приходится перечитывать.
+    // без try/catch ошибка чтения ушла бы в addError без эмита, и bloc остался
+    // бы в предыдущем состоянии: экран показал бы старое имя
+    try {
       emit(ProfileLoaded(await _getProfile()));
+    } catch (e) {
+      emit(ProfileError(e.toString()));
     }
   }
 
@@ -58,15 +80,19 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     SubmitPracticeResult event,
     Emitter<ProfileState> emit,
   ) async {
-    final result = await _registerPracticeResult(
-      itemsId: event.itemsId,
-      score: event.score,
-      total: event.total,
-    );
+    try {
+      final result = await _registerPracticeResult(
+        itemsId: event.itemsId,
+        score: event.score,
+        total: event.total,
+      );
 
-    emit(ProfileLoaded(
-      result.profile,
-      awardedPoints: result.awarded ? result.pointsAwarded : null,
-    ));
+      emit(ProfileLoaded(
+        result.profile,
+        awardedPoints: result.awarded ? result.pointsAwarded : null,
+      ));
+    } catch (e) {
+      emit(ProfileError(e.toString()));
+    }
   }
 }

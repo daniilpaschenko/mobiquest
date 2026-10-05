@@ -13,8 +13,6 @@ import '../../features/items/presentation/screens/items_theory_screen.dart';
 import '../../features/items/presentation/screens/items_practice_screen.dart';
 import '../../features/items/presentation/blocs/items_bloc.dart';
 
-import '../../features/themes/presentation/blocs/themes_event.dart';
-
 import 'app_routes.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -38,9 +36,10 @@ final goRouter = GoRouter(
             GoRoute(
               path: AppRoutes.themes,
               name: 'themes',
-              // ThemesBloc — singleton, живёт пока живёт ветка
+              // ThemesBloc — singleton, живёт пока живёт ветка.
+              // Загрузку списка запускает ThemesScreen.initState
               builder: (context, state) => BlocProvider.value(
-                value: sl<ThemesBloc>()..add(const LoadItems()),
+                value: sl<ThemesBloc>(),
                 child: const ThemesScreen(),
               ),
               routes: [
